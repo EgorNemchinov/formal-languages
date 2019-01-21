@@ -26,7 +26,7 @@ def parse_graph_get_matrices(file_path, grammar, inv_grammar):
             terms = line.split()
             assert len(terms) == 3, 'Wrong graph input format. Expected 3 terms, got {}'.format(len(terms))
             from_vert, to_vert = int(terms[0]), int(terms[2].rstrip(','))
-            assert from_vert > 0 and to_vert > 0, 'Vertices indices must be above zero'
+            # assert from_vert > 0 and to_vert > 0, 'Vertices indices must be above zero'
             max_node = max(max_node, from_vert, to_vert)
             result_graph[from_vert - 1][to_vert - 1] = terms[1]
     matrices = {i: np.zeros((max_node, max_node), dtype='bool') for i in grammar}

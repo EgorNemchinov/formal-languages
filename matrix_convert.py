@@ -35,6 +35,7 @@ def from_type(matrices):
             return matrices
         else:
             raise ValueError('Matrix type {} is not supported'.format(matrix.dtype))
+    log('Matrices are copied to GPU')
     return matrices
 
 
@@ -47,4 +48,5 @@ def to_gpu(matrices):
 def from_gpu(matrices):
     for nonterminal, matrix in matrices.items():
         matrices[nonterminal] = matrix.copy_to_host()
+    log('Matrices are copied from GPU')
     return matrices

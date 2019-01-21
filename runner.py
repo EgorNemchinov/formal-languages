@@ -84,9 +84,7 @@ def solve(grammar, inverse_grammar, matrices):
         is_changed = update_matrix(matrices, head, body)
         if not is_changed:
             continue
-        for product in inverse_by_nonterm[head]:
-            if product != (head, body):
-                to_recalculate.add(product)
+        to_recalculate |= inverse_by_nonterm[head]
     log('Finished solving, processed {} products'.format(counter))
 
 
@@ -105,10 +103,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('grammar_path', type=str, help='File with grammar in CNF')
     parser.add_argument('graph_path', type=str, help='Path to a directional graph')
+    parser.add_argument('-o', '--output_path', type=str, default=None, help='Save output into file')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print logs into console')
     parser.add_argument('-c', '--cpu', action='store_true', help='Run on CPU simple bool multiplication')
     parser.add_argument('-t', '--type', type=str, default='bool', help='Compress bools to type')
     parser.add_argument('-s', '--shared_memory', action='store_true', help='Use multiplication with shared memory')
+    parser.add_argument('-r', '--run_time', action='store_true', help='Print solution and run times')
     args = parser.parse_args()
 
     logger.verbose = args.verbose
@@ -117,6 +117,19 @@ if __name__ == '__main__':
     matrix_operations.shared_memory = args.shared_memory
 
     time_dict = {}
-    print(run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict))
-    log('Solving took {} s'.format(time_dict['solution_time']))
-    log('Total run time is {} s'.format(time_dict['run_time']))
+    solution = run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict)
+
+    if args.output_path is None:
+        print(solution)
+    else:
+        with open(args.output_path, 'w') as f:
+            f.write(solution)
+
+    run_time_string = 'Solving took {}s'.format(time_dict['solution_time'])
+    total_time_string = 'Total run time is {}s'.format(time_dict['run_time'])
+    log(run_time_string)
+    log(total_time_string)
+
+    if not args.verbose and args.run_time:
+        print(run_time_string)
+        print(total_time_string)

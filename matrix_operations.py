@@ -15,9 +15,9 @@ INT_TYPE_VALUES = [np.uint32, numba.uint32, 'uint32', 'int']
 
 def update_matrix(matrices, head, body):
     if gpu:
-        update_matrix_gpu(matrices, head, body)
+        return update_matrix_gpu(matrices, head, body)
     else:
-        update_matrix_cpu(matrices, head, body)
+        return update_matrix_cpu(matrices, head, body)
 
 
 def update_matrix_cpu(matrices, head, body):
