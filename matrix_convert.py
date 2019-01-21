@@ -1,8 +1,7 @@
 import numpy as np
 import numba
 from logger import log
-
-BOOL_TYPE_VALUES = ['bool', np.bool, numba.boolean]
+from matrix_operations import BOOL_TYPE_VALUES
 
 
 def to_type(matrices, type):
@@ -13,7 +12,6 @@ def to_type(matrices, type):
             return matrices
         else:
             raise ValueError('Matrix type {} is not supported'.format(type))
-
     return matrices
 
 
@@ -29,11 +27,11 @@ def from_type(matrices):
 
 def to_gpu(matrices):
     for nonterminal, matrix in matrices.items():
-        matrices[nonterminal] = matrix.copy_to_host()
+        matrices[nonterminal] = numba.cuda.to_device(matrix)
     return matrices
 
 
 def from_gpu(matrices):
     for nonterminal, matrix in matrices.items():
-        matrices[nonterminal] = numba.cuda.to_device(matrix)
+        matrices[nonterminal] = matrix.copy_to_host()
     return matrices

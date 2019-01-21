@@ -76,6 +76,7 @@ def solve(grammar, inverse_grammar, matrices):
 
     counter = 0
     to_recalculate = set(products_set(grammar))
+    log('Initial products: {}'.format(to_recalculate))
     while to_recalculate:
         counter += 1
         head, body = to_recalculate.pop()
@@ -107,13 +108,13 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true', help='Print logs into console')
     parser.add_argument('-c', '--cpu', action='store_true', help='Run on CPU simple bool multiplication')
     parser.add_argument('-t', '--type', type=str, default='bool', help='Compress bools to type')
-    parser.add_argument('-m', '--memory_shared', action='store_true', help='Use multiplication with shared memory')
+    parser.add_argument('-s', '--shared_memory', action='store_true', help='Use multiplication with shared memory')
     args = parser.parse_args()
 
     logger.verbose = args.verbose
     gpu = not args.cpu
     matrix_operations.gpu = gpu
-    matrix_operations.shared_memory = args.memory_shared
+    matrix_operations.shared_memory = args.shared_memory
 
     time_dict = {}
     print(run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict))
