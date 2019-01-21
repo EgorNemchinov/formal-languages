@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import argparse
 
@@ -41,6 +42,8 @@ if __name__ == '__main__':
     result = check_answers(args.result, args.correct_answer)
     if result:
         print("Correct.")
+        sys.exit(0)
     else:
         print("".join(["-"] * 20))
         print("Wrong.")
+        sys.exit(1)

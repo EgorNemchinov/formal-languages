@@ -32,13 +32,13 @@ def run(grammar_path, graph_path, type='bool', time_dict=None):
         matrices = from_gpu(matrices)
     matrices = from_type(matrices)
 
-    answer = solution_string(matrices)
+#    answer = solution_string(matrices)
     run_end_time = time.time()
 
     if time_dict is not None:
         time_dict['solution_time'] = solution_end_time - solution_begin_time
         time_dict['run_time'] = run_end_time - run_begin_time
-    return answer
+    return matrices
 
 
 def calculate_matrices(grammar, inv_grammar, graph, graph_size):
@@ -68,10 +68,8 @@ def solve(grammar, inverse_grammar, matrices):
     for body, heads in inverse_grammar.items():
         assert type(body) is tuple, 'Left terminals in grammar: {}'.format(body)
         for head in heads:
-            if body[0] != head:
-                inverse_by_nonterm[body[0]].add((head, body))
-            if body[1] != head:
-                inverse_by_nonterm[body[1]].add((head, body))
+            inverse_by_nonterm[body[0]].add((head, body))
+            inverse_by_nonterm[body[1]].add((head, body))
     log('Start solving')
 
     counter = 0
@@ -99,6 +97,18 @@ def solution_string(matrices):
     return '\n'.join(lines)
 
 
+def write_solution(output_file, matrices):
+    with open(output_file, 'wt') as f:
+        for nonterminal, matrix in matrices.items():
+            xs, ys = np.where(matrix)
+            #xs += 1
+            #ys += 1
+            f.write(nonterminal + ' ')
+            for x, y in zip(xs, ys):
+                f.write('{0} {1} '.format(x, y))
+            f.write('\n')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('grammar_path', type=str, help='File with grammar in CNF')
@@ -117,13 +127,14 @@ if __name__ == '__main__':
     matrix_operations.shared_memory = args.shared_memory
 
     time_dict = {}
-    solution = run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict)
+    matrices = run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict)
 
     if args.output_path is None:
-        print(solution)
+        print(solution_string(matrices))
     else:
-        with open(args.output_path, 'w') as f:
-            f.write(solution)
+        write_solution(args.output_path, matrices)
+#        with open(args.output_path, 'w') as f:
+#            f.write(solution)
 
     run_time_string = 'Solving took {}s'.format(time_dict['solution_time'])
     total_time_string = 'Total run time is {}s'.format(time_dict['run_time'])
@@ -131,5 +142,4 @@ if __name__ == '__main__':
     log(total_time_string)
 
     if not args.verbose and args.run_time:
-        print(run_time_string)
-        print(total_time_string)
+        print(int(time_dict['solution_time'] * 1000))
