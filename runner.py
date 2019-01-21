@@ -1,16 +1,17 @@
 import time
 import argparse
 import numpy as np
-from matrix_operations import to_type, from_type, to_gpu, from_gpu
+from collections import defaultdict
 
-from parsing import parse_grammar, parse_graph_get_matrices
+import matrix_operations
+from matrix_convert import to_type, from_type, to_gpu, from_gpu
+from matrix_operations import update_matrix
+from parsing import parse_grammar, parse_graph_get_matrices, products_set
 
-verbose, gpu, shared_memory = False, False, False
+from logger import log
+import logger
 
-
-def log(message):
-    if verbose:
-        print('-> ' + message)
+gpu = False
 
 
 def run(grammar_path, graph_path, type='bool', time_dict=None):
@@ -29,6 +30,7 @@ def run(grammar_path, graph_path, type='bool', time_dict=None):
 
     if gpu:
         matrices = from_gpu(matrices)
+    matrices = from_type(matrices)
 
     answer = solution_string(matrices)
     run_end_time = time.time()
@@ -61,8 +63,30 @@ def process_grammar(grammar, inverse_grammar):
 
 
 def solve(grammar, inverse_grammar, matrices):
-    log('Start solving..')
-    log('Finish solving..')
+    log('Setting up nonterm-to-product lookup dictionary')
+    inverse_by_nonterm = defaultdict(set)
+    for body, heads in inverse_grammar.items():
+        assert type(body) is tuple, 'Left terminals in grammar: {}'.format(body)
+        for head in heads:
+            if body[0] != head:
+                inverse_by_nonterm[body[0]].add((head, body))
+            if body[1] != head:
+                inverse_by_nonterm[body[1]].add((head, body))
+    log('Start solving')
+
+    counter = 0
+    to_recalculate = set(products_set(grammar))
+    while to_recalculate:
+        counter += 1
+        head, body = to_recalculate.pop()
+        assert type(body) is tuple, 'Body is either str or tuple, not {}'.format(type(body))
+        is_changed = update_matrix(matrices, head, body)
+        if not is_changed:
+            continue
+        for product in inverse_by_nonterm[head]:
+            if product != (head, body):
+                to_recalculate.add(product)
+    log('Finished solving, processed {} products'.format(counter))
 
 
 def solution_string(matrices):
@@ -86,9 +110,10 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--memory_shared', action='store_true', help='Use multiplication with shared memory')
     args = parser.parse_args()
 
-    verbose = args.verbose
+    logger.verbose = args.verbose
     gpu = not args.cpu
-    shared_memory = args.memory_shared
+    matrix_operations.gpu = gpu
+    matrix_operations.shared_memory = args.memory_shared
 
     time_dict = {}
     print(run(args.grammar_path, args.graph_path, args.type, time_dict=time_dict))
