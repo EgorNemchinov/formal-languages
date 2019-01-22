@@ -18,19 +18,20 @@ def run(grammar_path, graph_path, type='bool', time_dict=None):
     run_begin_time = time.time()
     grammar, inverse_grammar = parse_grammar(grammar_path)
     matrices = parse_graph_get_matrices(graph_path, grammar, inverse_grammar)
+    size = list(matrices.values())[0].shape[0]
     process_grammar(grammar, inverse_grammar)
 
     matrices = to_type(matrices, type)
+    solution_begin_time = time.time()
     if gpu:
         matrices = to_gpu(matrices)
 
-    solution_begin_time = time.time()
     solve(grammar, inverse_grammar, matrices)
-    solution_end_time = time.time()
 
     if gpu:
         matrices = from_gpu(matrices)
-    matrices = from_type(matrices)
+    matrices = from_type(matrices, type, size)
+    solution_end_time = time.time()
 
 #    answer = solution_string(matrices)
     run_end_time = time.time()
@@ -132,14 +133,15 @@ if __name__ == '__main__':
     if args.output_path is None:
         print(solution_string(matrices))
     else:
+        log('Writing solution')
         write_solution(args.output_path, matrices)
 #        with open(args.output_path, 'w') as f:
 #            f.write(solution)
 
-    run_time_string = 'Solving took {}s'.format(time_dict['solution_time'])
-    total_time_string = 'Total run time is {}s'.format(time_dict['run_time'])
+    solution_time_string = 'Solving took {}s'.format(time_dict['solution_time'])
+    run_time_string = 'Total run time is {}s'.format(time_dict['run_time'])
+    log(solution_time_string)
     log(run_time_string)
-    log(total_time_string)
 
     if not args.verbose and args.run_time:
         print(int(time_dict['solution_time'] * 1000))

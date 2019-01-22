@@ -7,7 +7,7 @@ from matrix_operations import TPB, BOOL_TYPE_VALUES, BYTE_TYPE_VALUES, INT_TYPE_
 def to_type(matrices, type):
     for key, matrix in matrices.items():
         assert matrix.dtype == np.bool, "Passed matrices aren't bool"
-        if matrix.dtype in BOOL_TYPE_VALUES:
+        if type in BOOL_TYPE_VALUES:
             log('Matrices already bool, returning them..')
             return matrices
         elif type in BYTE_TYPE_VALUES:
@@ -28,20 +28,28 @@ def to_type(matrices, type):
     return matrices
 
 
-def from_type(matrices):
+def from_type(matrices, type, size):
     for key, matrix in matrices.items():
-        if matrix.dtype in BOOL_TYPE_VALUES:
+        if type in BOOL_TYPE_VALUES:
             log('Matrices already bool, returning them..')
             return matrices
+        elif type in BYTE_TYPE_VALUES:
+            matrix = np.unpackbits(matrix, axis=axis)[:nodes_amount, :nodes_amount]
+            matrices[key] = matrix
+        elif type in INT_TYPE_VALUES:
+            full_matrix = np.zeros((matrix.shape[0], matrix.shape[1] * 32), dtype=bool)
+            for i in range(32):
+                full_matrix[:, i::32] = (matrix >> (31 - i)) & 1
+            matrices[key] = full_matrix[:size, :size]
         else:
             raise ValueError('Matrix type {} is not supported'.format(matrix.dtype))
-    log('Matrices are copied to GPU')
     return matrices
 
 
 def to_gpu(matrices):
     for nonterminal, matrix in matrices.items():
         matrices[nonterminal] = numba.cuda.to_device(matrix)
+    log('Matrices are copied to GPU')
     return matrices
 
 

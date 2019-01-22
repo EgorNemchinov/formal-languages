@@ -28,7 +28,8 @@ def parse_graph_get_matrices(file_path, grammar, inv_grammar):
             from_vert, to_vert = int(terms[0]), int(terms[2].rstrip(','))
             # assert from_vert > 0 and to_vert > 0, 'Vertices indices must be above zero'
             max_node = max(max_node, from_vert, to_vert)
-            result_graph[from_vert - 1][to_vert - 1] = terms[1]
+            result_graph[from_vert][to_vert] = terms[1]
+    max_node += 1
     matrices = {i: np.zeros((max_node, max_node), dtype='bool') for i in grammar}
     for row, verts in result_graph.items():
         for col, value in verts.items():
