@@ -1,7 +1,9 @@
+
 import numpy as np
 import numba
 from logger import log
-from matrix_operations import TPB, BOOL_TYPE_VALUES, BYTE_TYPE_VALUES, INT_TYPE_VALUES, shared_memory
+from matrix_operations import TPB, BOOL_TYPE_VALUES, BYTE_TYPE_VALUES, INT_TYPE_VALUES
+import matrix_operations
 
 
 def to_type(matrices, type):
@@ -11,13 +13,13 @@ def to_type(matrices, type):
             log('Matrices already bool, returning them..')
             return matrices
         elif type in BYTE_TYPE_VALUES:
-            if shared_memory:
+            if matrix_operations.shared_memory:
                 size = 8 * TPB[0]
                 matrix = np.pad(matrix, [(0, (size - matrix.shape[0]) % size), (0, (size - matrix.shape[1]) % size)], 'constant')
             matrix = np.packbits(matrix, axis=-1)
             matrices[key] = matrix
         elif type in INT_TYPE_VALUES:
-            if shared_memory:
+            if matrix_operations.shared_memory:
                 size = 32 * TPB[0]
                 matrix = np.pad(matrix, [(0, (size - matrix.shape[0]) % size), (0, (size-matrix.shape[1]) % size)], 'constant')
             matrix = np.pad(matrix, [(0, 0), (0, (32 - matrix.shape[1] % 32) % 32)], 'constant').astype(np.uint32)
@@ -34,7 +36,7 @@ def from_type(matrices, type, size):
             log('Matrices already bool, returning them..')
             return matrices
         elif type in BYTE_TYPE_VALUES:
-            matrix = np.unpackbits(matrix, axis=axis)[:nodes_amount, :nodes_amount]
+            matrix = np.unpackbits(matrix, axis=-1)[:size, :size]
             matrices[key] = matrix
         elif type in INT_TYPE_VALUES:
             full_matrix = np.zeros((matrix.shape[0], matrix.shape[1] * 32), dtype=bool)

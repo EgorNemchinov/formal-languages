@@ -6,11 +6,13 @@ import numba
 gpu = False
 shared_memory = False
 TPB = (16, 16)
-sB_size8 = TPB[0] * 8
-sB_size32 = TPB[1] * 32
+TPB0, TPB1 = TPB[0], TPB[1]
+sB_size8 = TPB0 * 8
+sB_size32 = TPB1 * 32
 BOOL_TYPE_VALUES = ['bool', np.bool, numba.boolean]
 BYTE_TYPE_VALUES = [np.uint8, numba.uint8, 'uint8', 'byte']
 INT_TYPE_VALUES = [np.uint32, numba.uint32, 'uint32', 'int']
+is_changed = cuda.device_array((1,), dtype=bool)
 
 
 def update_matrix(matrices, head, body):
@@ -34,7 +36,8 @@ def update_matrix_cpu(matrices, head, body):
 def update_matrix_gpu(matrices, head, body):
     head_mat = matrices[head]
     body_first_mat, body_second_mat = matrices[body[0]], matrices[body[1]]
-    is_changed = cuda.device_array((1,), dtype=bool)
+    refresh_changed = np.full((1,), dtype=bool, fill_value=False)
+    cuda.to_device(refresh_changed, to=is_changed)
 
     blockspergrid = tuple(int(math.ceil(body_first_mat.shape[i] / TPB[i])) for i in (0, 1))
 
@@ -118,15 +121,15 @@ def matmul_packed8_shared(A, B, C, is_changed):
 
     size = x_interval = 8
 
-    sA = cuda.shared.array(shape=(TPB[0], TPB[1]), dtype=numba.uint8)
-    sB = cuda.shared.array(shape=(sB_size8, TPB[1]), dtype=numba.uint8)
+    sA = cuda.shared.array(shape=(TPB0, TPB1), dtype=numba.uint8)
+    sB = cuda.shared.array(shape=(sB_size8, TPB1), dtype=numba.uint8)
 
     if row >= C.shape[0] or col >= C.shape[1]:
         return
     value = 0
     for step in range(math.ceil(A.shape[1] / TPB[1])):
-        if step * TPB[0] + ty < A.shape[1]:
-            sA[tx, ty] = A[row, step * TPB[0] + ty]
+        if step * TPB0 + ty < A.shape[1]:
+            sA[tx, ty] = A[row, step * TPB0 + ty]
         else:
             sA[tx, ty] = 0
 
@@ -161,15 +164,15 @@ def matmul_packed32_shared(A, B, C, is_changed):
 
     size = x_interval = 32
 
-    sA = cuda.shared.array(shape=(TPB[0], TPB[1]), dtype=numba.uint32)
-    sB = cuda.shared.array(shape=(sB_size32, TPB[1]), dtype=numba.uint32)
+    sA = cuda.shared.array(shape=(TPB0, TPB1), dtype=numba.uint32)
+    sB = cuda.shared.array(shape=(sB_size32, TPB1), dtype=numba.uint32)
 
     if row >= C.shape[0] or col >= C.shape[1]:
         return
     value = 0
-    for step in range(math.ceil(A.shape[1] / TPB[1])):
-        if step * TPB[0] + ty < A.shape[1]:
-            sA[tx, ty] = A[row, step * TPB[0] + ty]
+    for step in range(math.ceil(A.shape[1] / TPB1)):
+        if step * TPB0 + ty < A.shape[1]:
+            sA[tx, ty] = A[row, step * TPB0 + ty]
         else:
             sA[tx, ty] = 0
 
@@ -181,7 +184,7 @@ def matmul_packed32_shared(A, B, C, is_changed):
 
         cuda.syncthreads()
 
-        for k in range(TPB[1]):
+        for k in range(TPB1):
             cur_value_A = sA[tx, k]
             for j in range(size - 1, -1, -1):
                 if cur_value_A & 1:
